@@ -13,10 +13,10 @@ X1 | 2 means connector X1 pin 2
 ## Power Supply
 
 
-| Connector |      Signal      |     Description     |
-| :-------: |:----------------:| :------------------: |
-|  X1\| 1  |       GND        |        Ground        |
-|  X1\| 2  | +V<sub>>cc<sub/> | Power Supply Voltage |
+| Connector |     Signal      |     Description     |
+| :-------: |:---------------:| :------------------: |
+|  X1\| 1  |       GND       |        Ground        |
+|  X1\| 2  | +V<sub>cc<sub/> | Power Supply Voltage |
 
 ## Logic Supply
 
