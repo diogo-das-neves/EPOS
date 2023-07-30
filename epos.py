@@ -1,3 +1,4 @@
+import logging
 import canopen
 
 
@@ -41,6 +42,18 @@ class Epos:
                   0x0F00FFC0: 'Error code: Device is in wrong NMT state'
 
                   }
+
+    def __int__(self, network=None, debug=False):
+        if not network:
+            self.network = canopen.Network()
+        else:
+            self.network=network
+        self.logger = logging.getLogger('EPOS')
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.INFO)
+
 
 
 if __name__ == '__main__':
