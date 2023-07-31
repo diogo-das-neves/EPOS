@@ -7,7 +7,7 @@ class Epos:
     bustype = 'socketcan'
     nodeID = 1
     network = None
-    _connected = False
+    connected = False
     errorDetected = False
 
     # List of motor types
@@ -54,6 +54,9 @@ class Epos:
         else:
             self.logger.setLevel(logging.INFO)
 
+def main():
+
+    epos = Epos()
 
 
 if __name__ == '__main__':
