@@ -3,7 +3,8 @@ import canopen
 import argparse
 import sys
 
-class EPOS:
+
+class Epos():
     channel = 'can0'
     bustype = 'socketcan'
     nodeID = 1
@@ -11,7 +12,6 @@ class EPOS:
     connected = False
     errorDetected = False
 
-    # List of motor types
     motorType = {'DC motor': 1, 'Sinusoidal PM BL motor': 10,
                  'Trapezoidal PM BL motor': 11}
 
@@ -43,50 +43,7 @@ class EPOS:
                   0x0F00FFC0: 'Error code: Device is in wrong NMT state'
                   }
 
-    objectIndex = {
-        ### [0x1xxx]
-        'Device Type': 0x1000,
-        'Error Register': 0x1001,
-        'Error History': 0x1003,
-        'COB-ID SYNC': 0x1005,
-        'Manufacter Device Name': 0x1008,
-        'Store Parameters': 0x1010,
-        'Restore Default Parameters': 0x1011,
-        'COB_ID EMCY': 0x1014,
-        'Consumer Heartbeat Time': 0x1016,
-        'Producer Heartbeat Time': 0x1017,
-        'Identify Object': 0x1018,
-        'Error Behavior': 0x1029,
-        'SDO Server Parameter': 0x1200,
-        'Receive PDO 1 Parameter': 0x1400,
-        'Receive PDO 2 Parameter': 0x1401,
-        'Receive PDO 3 Parameter': 0x1402,
-        'Receive PDO 4 Parameter': 0x1403,
-        'Receive PDO 1 Mapping': 0x1600,
-        'Receive PDO 2 Mapping': 0x1601,
-        'Receive PDO 3 Mapping': 0x1602,
-        'Receive PDO 4 Mapping': 0x1603,
-        'Transmit PDO 1 Parameter': 0x1800,
-        'Transmit PDO 2 Parameter': 0x1802,
-        'Transmit PDO 3 Parameter': 0x1803,
-        'Transmit PDO 4 Parameter': 0x1804,
-        'Transmit PDO 1 Mapping': 0x1A00,
-        'Transmit PDO 2 Mapping': 0x1A01,
-        'Transmit PDO 3 Mapping': 0x1802,
-        'Transmit PDO 4 Mapping': 0x1A03,
-        'Program Data': 0x1F51,
-        'Program Software Identification': 0x1F56,
-        'Flash Status Identification': 0x1F57,
-        ### [0x2xxx]
-        'Node ID': 0x2000,
-        'CAN Bit Rate': 0x2001,
-        'RS232 Bit Rate': 0x2002,
-        'RS232 Frame Timeout': 0x2005,
-        'USB Frame Timeout': 0x2006,
-        'CAN Bit Rate Display': 0x200A,
-        'Active FieldBus': 0x2010,
-        'Additional Identity': 0x2100,
-    }
+    # Object Index will be given the DCF file
 
     emcy_descriptions = [
         # Code   Description
@@ -132,22 +89,19 @@ class EPOS:
     state = {0: 'start', 1: 'not ready to switch on', 2: 'switch on disable',
              3: 'ready to switch on', 4: 'switched on', 5: 'refresh',
              6: 'measure init', 7: 'operation enable', 8: 'quick stop active',
-             9: 'fault reaction active (disabled)', 10: 'fault reaction active (enable)', 11: 'fault',
+             9: 'fault reaction active (disabled)', 10: 'fault reaction active (enable)',
+             11: 'fault',
              -1: 'Unknown'}
 
-    def __int__(self):
+    def __init__(self):
         if not self.network:
             self.network = canopen.Network()
 
-    def begin(self, nodeID, channel='can0', bustype='socketcan', dictionary=None):
+    def start(self, nodeID=1, channel='can0', bustype='socketcan', dcf_file='dcf/latestDCF.dcf'):
         try:
-            self.node = self.network.add_node(nodeID, object_dictionary=dictionary)
-            self.node.emcy.add_callback(self.emcy_error_print)
+            self.node = self.network.add_node(node=nodeID, object_dictionary=dcf_file)
             if not self.network.bus:
                 self.network.connect(channel=channel, bustype=bustype)
-            val, _ = self.read_statusword()
-            if val is None:
-                self.channel = False
         except Exception as e:
             self.log_info("Exception caught:{0}".format(str(e)))
             self.connected = False
@@ -189,34 +143,6 @@ class EPOS:
         return
 
 
-    def read_statusword(self):
-        """Read StatusWord
-
-        Request current statusword from device.
-
-        Returns:
-            tuple: A tuple containing:
-
-            :statusword:  the current statusword or None if any error.
-            :ok: A boolean if all went ok.
-        """
-        index = self.objectIndex['StatusWord']
-        subindex = 0
-        statusword = self.read_object(index, subindex)
-        # failed to request?
-        if not statusword:
-            self.log_info('Error trying to read {0} statusword'.format(
-                self.__class__.__name__))
-            return statusword, False
-
-        # return statusword as an int type
-        statusword = int.from_bytes(statusword, 'little')
-        return statusword, True
-
-    def printNodes(self):
-        for node_id in self.network:
-            print(self.network[node_id])
-
 def main():
     parser = argparse.ArgumentParser(add_help=True,
                                      description='Test Epos CANopen Communication')
@@ -231,7 +157,6 @@ def main():
     parser.add_argument('--objDict', '-d', action='store', default=None,
                         type=str, help='Object dictionary file', dest='objDict')
     args = parser.parse_args()
-
 
     # set up logging to file - see previous section for more details
     logging.basicConfig(level=logging.INFO,
@@ -249,14 +174,13 @@ def main():
     # add the handler to the root logger
     logging.getLogger('').addHandler(console)
 
-    epos = EPOS()
+    epos = Epos()
 
-    if not (epos.begin(args.nodeID, dictionary=args.objDict)):
+    if not (epos.start(nodeID=args.nodeID, dcf_file=args.objDict)):
         logging.info('Failed to begin connection with EPOS device')
         logging.info('Exiting now')
         return
 
-    epos.printNodes()
     '''TODO:
     Deal with PDO's
     Position Demand Value: 6062
@@ -268,4 +192,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
